@@ -80,8 +80,9 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient());
         webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
 
-        // Cargar el juego
-        webView.loadUrl(API_URL + "/");
+        // Cargar el juego (forzando recarga sin caché para ver siempre la última versión)
+        webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+        webView.loadUrl(API_URL + "/?v=" + System.currentTimeMillis());
     }
 
     /** Bridge nativo expuesto al JS del juego. */

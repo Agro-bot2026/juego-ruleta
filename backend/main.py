@@ -16,6 +16,7 @@ app = FastAPI(title="JuegoRuleta API", version="2.0.0")
 class GirarReq(BaseModel):
     categoria_id: Optional[int] = None
     tipo: Optional[str] = None        # "pregunta" | "situacion" | None (random)
+    con_audio: bool = False           # generar audio ya (lento) o después
 
 class GenerarReq(BaseModel):
     categoria_id: int
@@ -91,8 +92,16 @@ def girar(req: GirarReq):
     if not tarjeta:
         raise HTTPException(500, "sin tarjetas para la categoría")
 
-    audio = ia.guardar_audio(tarjeta["texto"], cat["id"])
+    audio = ia.guardar_audio(tarjeta["texto"], cat["id"]) if req.con_audio else None
     return {"categoria": cat, "tarjeta": tarjeta, "audio_url": audio}
+
+@app.post("/audio")
+def audio_generar(texto: str, categoria_id: int = 0):
+    """Genera el audio de un texto (edge-tts gratis) y devuelve la URL."""
+    if not texto.strip():
+        raise HTTPException(400, "texto vacío")
+    url = ia.guardar_audio(texto, categoria_id)
+    return {"audio_url": url}
 
 @app.post("/situacion/generar")
 def situacion_generar(req: GenerarReq):
