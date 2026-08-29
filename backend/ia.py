@@ -202,24 +202,33 @@ Evaluá según las reglas del system prompt. Devolvé SOLO el JSON exacto:
             return {"resultado": "parcial", "puntaje": 6, "feedback": "Buena idea. Sumale una acción concreta y cómo la comunicarías con empatía."}
         return {"resultado": "correcta", "puntaje": 10, "feedback": "¡Excelente respuesta! Mostrás criterio clínico, empatía y una acción concreta."}
 
-# ─── TTS (OpenAI, voz echo masculina — igual que bot Descryptor) ───
+# ─── TTS: edge-tts GRATIS (Microsoft — como el bot Descryptor) ───
+# Voz: es-CO-SalomeNeural (colombiana, la misma del bot)
+import subprocess
+import tempfile
+
 def tts(texto, formato="mp3"):
-    """Genera audio TTS con OpenAI (voz echo). Devuelve bytes mp3."""
-    if not OPENAI_API_KEY:
-        return None
-    body = json.dumps({
-        "model": "tts-1",
-        "voice": TTS_VOICE,
-        "input": texto[:500],
-        "format": formato,
-    }).encode()
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/audio/speech",
-        data=body,
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {OPENAI_API_KEY}"})
+    """Genera audio con edge-tts (gratis). Devuelve bytes mp3."""
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            return resp.read()
+        limpio = texto.replace("\n", " ")
+        tmp = os.path.join(tempfile.gettempdir(), f"ruleta_tts_{uuid.uuid4().hex[:8]}.mp3")
+        script = (
+            "import asyncio, edge_tts\n"
+            f"async def main():\n"
+            f"    tts = edge_tts.Communicate({json.dumps(limpio[:400])}, voice=\"es-CO-SalomeNeural\")\n"
+            f"    await tts.save({json.dumps(tmp)})\n"
+            "asyncio.run(main())"
+        )
+        script_path = os.path.join(tempfile.gettempdir(), f"gen_voz_{uuid.uuid4().hex[:8]}.py")
+        with open(script_path, "w") as f:
+            f.write(script)
+        subprocess.run(["/usr/bin/python3", script_path], timeout=30, capture_output=True)
+        with open(tmp, "rb") as f:
+            data = f.read()
+        for p in (tmp, script_path):
+            try: os.unlink(p)
+            except OSError: pass
+        return data if data else None
     except Exception:
         return None
 

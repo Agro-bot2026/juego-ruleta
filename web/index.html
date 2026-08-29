@@ -353,6 +353,8 @@ function mostrarTarjeta(){
     : 'Pregunta · Nivel básico';
   $('tarjetaBox').style.borderTopColor = categoriaActual.color;
   mostrar('scrTarjeta');
+  // Reproducir el audio automáticamente (edge-tts gratis)
+  setTimeout(escucharTarjeta, 400);
 }
 
 function escucharTarjeta(){
