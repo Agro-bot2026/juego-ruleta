@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>JuegoRuleta · Punto de Giro</title>
+<style>
+:root {
+  --azul:#1e88e5; --verde:#43a047; --amarillo:#fdd835;
+  --naranja:#fb8c00; --purpura:#8e24aa; --rojo:#e53935;
+  --bg:#f5f6fa; --card:#ffffff; --texto:#222; --gris:#666;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family:'Segoe UI', Roboto, Arial, sans-serif;
+  background:var(--bg); color:var(--texto);
+  min-height:100vh; display:flex; flex-direction:column;
+  user-select:none; -webkit-user-select:none;
+}
+header {
+  background:linear-gradient(135deg,#1a1a2e,#16213e);
+  color:#fff; padding:14px 18px; display:flex; align-items:center;
+  justify-content:space-between; position:sticky; top:0; z-index:50;
+  box-shadow:0 2px 12px rgba(0,0,0,.25);
+}
+header .logo-mini { width:38px; height:38px; border-radius:50%; overflow:hidden; border:2px solid #fff; flex-shrink:0; }
+header .logo-mini img { width:100%; height:100%; object-fit:cover; }
+header h1 { font-size:17px; font-weight:700; letter-spacing:.5px; margin-left:10px; flex:1; }
+header .pts { background:rgba(255,255,255,.15); border-radius:20px; padding:6px 12px; font-size:13px; font-weight:600; }
+main { flex:1; padding:16px; max-width:520px; width:100%; margin:0 auto; }
+.screen { display:none; animation:fadeIn .35s ease; }
+.screen.active { display:block; }
+@keyframes fadeIn { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+
+/* ─── Pantalla 0: Inicio ─── */
+.hero { text-align:center; margin:18px 0 24px; }
+.hero .ruleta-logo {
+  width:150px; height:150px; border-radius:50%; margin:0 auto 14px;
+  box-shadow:0 8px 30px rgba(0,0,0,.2); overflow:hidden;
+  border:4px solid #fff; position:relative;
+}
+.hero .ruleta-logo img { width:100%; height:100%; object-fit:cover; }
+.hero h2 { font-size:22px; margin-bottom:4px; }
+.hero p { color:var(--gris); font-size:14px; }
+.card-form { background:var(--card); border-radius:16px; padding:20px; box-shadow:0 2px 14px rgba(0,0,0,.08); }
+.card-form label { display:block; font-size:13px; font-weight:600; color:var(--gris); margin:12px 0 5px; }
+.card-form input {
+  width:100%; padding:13px 14px; border:2px solid #e2e6ee; border-radius:10px;
+  font-size:15px; outline:none; transition:border .2s; background:#fafbfd;
+}
+.card-form input:focus { border-color:var(--azul); background:#fff; }
+.btn {
+  display:block; width:100%; padding:15px; border:none; border-radius:12px;
+  font-size:16px; font-weight:700; color:#fff; cursor:pointer;
+  background:linear-gradient(135deg,var(--azul),#1565c0);
+  box-shadow:0 4px 14px rgba(30,136,229,.35); margin-top:18px;
+  transition:transform .1s, box-shadow .2s;
+}
+.btn:active { transform:scale(.97); }
+.btn.secondary { background:linear-gradient(135deg,#43a047,#2e7d32); box-shadow:0 4px 14px rgba(67,160,71,.3); }
+.btn.danger { background:linear-gradient(135deg,#e53935,#c62828); box-shadow:0 4px 14px rgba(229,57,53,.3); }
+.btn:disabled { opacity:.5; pointer-events:none; }
+
+/* ─── Pantalla 1: Ruleta ─── */
+.ruleta-wrap { position:relative; width:min(88vw,340px); margin:10px auto 8px; }
+.ruleta-wrap .flecha {
+  position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+  width:0; height:0; border-left:16px solid transparent; border-right:16px solid transparent;
+  border-top:26px solid #222; z-index:10; filter:drop-shadow(0 2px 3px rgba(0,0,0,.4));
+}
+.ruleta-wrap .flecha::after {
+  content:''; position:absolute; top:-30px; left:-8px; width:16px; height:16px;
+  background:#222; border-radius:50%; border:3px solid #fff;
+}
+.ruleta {
+  width:100%; aspect-ratio:1; border-radius:50%; overflow:hidden;
+  border:6px solid #222; box-shadow:0 10px 40px rgba(0,0,0,.3);
+  background:#fff; position:relative;
+}
+.ruleta img { width:100%; height:100%; object-fit:cover; display:block; transition:none; }
+.ruleta.spinning img { transition:transform 4.2s cubic-bezier(.16,.82,.3,1); }
+.centro-marcador {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  pointer-events:none; z-index:5;
+}
+.centro-marcador span {
+  width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.92);
+  border:3px solid #222; display:flex; align-items:center; justify-content:center;
+  font-size:22px; box-shadow:0 3px 12px rgba(0,0,0,.3);
+}
+.estado-ruleta { text-align:center; margin:14px 0; min-height:60px; }
+.estado-ruleta .cat-nombre {
+  font-size:20px; font-weight:800; padding:8px 20px; border-radius:30px; color:#fff;
+  display:inline-block; box-shadow:0 4px 12px rgba(0,0,0,.2);
+}
+.estado-ruleta .cat-sub { color:var(--gris); font-size:13px; margin-top:6px; }
+.estado-ruleta .girando { font-size:15px; color:var(--gris); }
+
+/* ─── Pantalla 2: Tarjeta ─── */
+.tarjeta {
+  background:var(--card); border-radius:18px; padding:24px; box-shadow:0 3px 18px rgba(0,0,0,.1);
+  border-top:6px solid var(--azul); margin-top:8px; position:relative;
+}
+.tarjeta .tag {
+  display:inline-block; font-size:11px; font-weight:800; letter-spacing:1px;
+  padding:4px 12px; border-radius:20px; color:#fff; text-transform:uppercase; margin-bottom:12px;
+}
+.tarjeta h3 { font-size:19px; line-height:1.45; margin-bottom:10px; }
+.tarjeta .tipo-aviso { font-size:12px; color:var(--gris); margin-bottom:8px; }
+.acciones { display:flex; gap:10px; margin-top:18px; }
+.acciones .btn { margin-top:0; }
+.btn.escuchar { background:linear-gradient(135deg,#8e24aa,#6a1b9a); box-shadow:0 4px 14px rgba(142,36,170,.35); flex:0 0 auto; width:auto; padding:15px 18px; font-size:20px; }
+.btn.saltar { background:linear-gradient(135deg,#78909c,#546e7a); box-shadow:0 4px 14px rgba(120,144,156,.3); }
+
+/* ─── Pantalla 3: Respuesta ─── */
+.resp-area { background:var(--card); border-radius:18px; padding:20px; box-shadow:0 3px 18px rgba(0,0,0,.1); }
+.resp-area .situacion-recuadro {
+  background:#f0f4ff; border-left:4px solid var(--azul); padding:14px; border-radius:10px;
+  font-size:14px; line-height:1.5; margin-bottom:16px; color:#333;
+}
+.resp-area textarea {
+  width:100%; min-height:130px; padding:14px; border:2px solid #e2e6ee; border-radius:12px;
+  font-size:15px; line-height:1.5; resize:vertical; outline:none; background:#fafbfd; font-family:inherit;
+}
+.resp-area textarea:focus { border-color:var(--azul); background:#fff; }
+.resp-area .mic-btn {
+  width:100%; padding:14px; margin-top:12px; border:2px dashed #b0bec5; border-radius:12px;
+  background:transparent; font-size:14px; color:var(--gris); cursor:pointer; display:flex;
+  align-items:center; justify-content:center; gap:8px;
+}
+.resp-area .mic-btn.rec { border-color:var(--rojo); color:var(--rojo); background:#fff0f0; }
+
+/* ─── Pantalla 4: Resultado ─── */
+.resultado-box { text-align:center; background:var(--card); border-radius:18px; padding:28px 20px; box-shadow:0 3px 18px rgba(0,0,0,.1); }
+.resultado-box .icono-grande { font-size:64px; margin-bottom:10px; animation:pop .4s ease; }
+@keyframes pop { from{transform:scale(.4); opacity:0;} to{transform:scale(1); opacity:1;} }
+.resultado-box .puntaje-gigante { font-size:52px; font-weight:900; line-height:1; }
+.resultado-box .feedback { font-size:15px; line-height:1.55; color:#444; margin:14px 0; background:#f7f8fa; padding:14px; border-radius:12px; text-align:left; }
+.tabla-puntajes { display:flex; gap:12px; margin:20px 0 6px; }
+.tabla-puntajes .equipo-box {
+  flex:1; padding:14px; border-radius:14px; color:#fff; text-align:center; box-shadow:0 3px 12px rgba(0,0,0,.2);
+}
+.tabla-puntajes .equipo-box .nombre { font-size:13px; font-weight:600; opacity:.95; }
+.tabla-puntajes .equipo-box .puntos { font-size:34px; font-weight:900; }
+.eq1 { background:linear-gradient(135deg,#1e88e5,#1565c0); }
+.eq2 { background:linear-gradient(135deg,#e53935,#c62828); }
+.turno-info { text-align:center; font-size:14px; color:var(--gris); margin-bottom:16px; font-weight:600; }
+
+/* Audio escondido para el TTS */
+audio { display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mini"><img src="assets/icons/ruleta_negro.jpg" alt="logo"></div>
+  <h1>JUEGO RULETA</h1>
+  <div class="pts" id="headerPts">—</div>
+</header>
+
+<main>
+  <!-- Pantalla 0: Inicio -->
+  <div class="screen active" id="scrInicio">
+    <div class="hero">
+      <div class="ruleta-logo"><img src="assets/icons/ruleta_blanco.jpg" alt="Punto de Giro"></div>
+      <h2>🎡 Punto de Giro</h2>
+      <p>Juego didáctico de enfermería</p>
+    </div>
+    <div class="card-form">
+      <label>Equipo 1</label>
+      <input id="eq1Input" placeholder="Ej: Los Galenos" maxlength="20">
+      <label>Equipo 2</label>
+      <input id="eq2Input" placeholder="Ej: Las Valientes" maxlength="20">
+      <button class="btn" onclick="crearPartida()">🎲 Comenzar partida</button>
+    </div>
+  </div>
+
+  <!-- Pantalla 1: Ruleta -->
+  <div class="screen" id="scrRuleta">
+    <div class="turno-info" id="turnoInfo">—</div>
+    <div class="ruleta-wrap">
+      <div class="flecha"></div>
+      <div class="ruleta" id="ruletaBox">
+        <img id="ruletaImg" src="assets/icons/ruleta_blanco.jpg" alt="Ruleta">
+        <div class="centro-marcador"><span>🎯</span></div>
+      </div>
+    </div>
+    <div class="estado-ruleta">
+      <div id="ruletaEstado"><span class="girando">Presioná GIRAR para empezar</span></div>
+    </div>
+    <button class="btn" id="btnGirar" onclick="girar()">🎯 GIRAR RULETA</button>
+  </div>
+
+  <!-- Pantalla 2: Tarjeta -->
+  <div class="screen" id="scrTarjeta">
+    <div class="turno-info" id="turnoInfo2">—</div>
+    <div class="tarjeta" id="tarjetaBox">
+      <span class="tag" id="tagCategoria">COMUNICACIÓN</span>
+      <h3 id="tarjetaTexto">—</h3>
+      <div class="tipo-aviso" id="tipoAviso">Pregunta · Nivel básico</div>
+      <div class="acciones">
+        <button class="btn escuchar" onclick="escucharTarjeta()">🔊</button>
+        <button class="btn" onclick="mostrarRespuesta()">✍️ Responder</button>
+        <button class="btn saltar" onclick="girar()">⏭️ Saltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pantalla 3: Respuesta -->
+  <div class="screen" id="scrRespuesta">
+    <div class="resp-area">
+      <div class="situacion-recuadro" id="respSituacion">—</div>
+      <textarea id="respInput" placeholder="Escribí tu respuesta..."></textarea>
+      <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎤 Responder con voz</button>
+      <button class="btn" onclick="evaluar()">✅ Evaluar respuesta</button>
+      <button class="btn secondary" style="margin-top:10px" onclick="volverTarjeta()">← Volver</button>
+    </div>
+  </div>
+
+  <!-- Pantalla 4: Resultado -->
+  <div class="screen" id="scrResultado">
+    <div class="resultado-box">
+      <div class="icono-grande" id="resIcono">🎉</div>
+      <div class="puntaje-gigante" id="resPuntaje" style="color:var(--azul)">10</div>
+      <div id="resEtiqueta" style="font-weight:700; margin-top:4px; color:var(--gris)">CORRECTA</div>
+      <div class="feedback" id="resFeedback">—</div>
+      <div class="tabla-puntajes">
+        <div class="equipo-box eq1"><div class="nombre" id="resEq1Name">—</div><div class="puntos" id="resEq1Pts">0</div></div>
+        <div class="equipo-box eq2"><div class="nombre" id="resEq2Name">—</div><div class="puntos" id="resEq2Pts">0</div></div>
+      </div>
+      <button class="btn" onclick="girar()">🎡 Siguiente ronda</button>
+      <button class="btn danger" style="margin-top:10px" onclick="reiniciar()">🔄 Nueva partida</button>
+    </div>
+  </div>
+</main>
+
+<audio id="audioPlayer"></audio>
+
+<script>
+// ─── Estado global ───
+let partidaId = null;
+let equipoActivo = 1;         // 1 o 2
+let categoriaActual = null;
+let tarjetaActual = null;
+let audioUrl = null;
+let girando = false;
+let reconocimientoVoz = null;
+
+const API = '';  // misma origin (WebView/navegador)
+
+// Bridge Android (si la app corre en WebView nativo)
+const BRIDGE = (typeof AndroidBridge !== 'undefined') ? AndroidBridge : null;
+const API_BASE = BRIDGE ? BRIDGE.getApiUrl() : '';
+const API_URL_FULL = API_BASE + API;
+
+// ─── Utilidades ───
+function $(id){ return document.getElementById(id); }
+function mostrar(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+const COLORS = {1:'#1e88e5',2:'#43a047',3:'#fdd835',4:'#fb8c00',5:'#8e24aa',6:'#e53935'};
+const NOMBRES = {1:'Comunicación',2:'Liderazgo',3:'Trabajo en equipo',4:'Toma de decisiones',5:'Motivación',6:'Resolución de conflictos'};
+const ICONOS = {1:'💬',2:'👑',3:'👥',4:'📋',5:'🚀',6:'🤝'};
+
+// Posición de cada categoría en la ruleta del dueño (grados, 0=arriba, sentido horario)
+const CAT_POS = {1:0, 2:60, 3:120, 4:180, 5:240, 6:300};
+
+function actualizarHeader(){
+  if(!partidaId){ $('headerPts').textContent = '—'; return; }
+  $('headerPts').textContent = `${nombreEquipo(1)} ${puntosEquipo(1)} · ${nombreEquipo(2)} ${puntosEquipo(2)}`;
+}
+function nombreEquipo(n){ return n===1 ? ($('eq1Input').value||'Equipo 1') : ($('eq2Input').value||'Equipo 2'); }
+function puntosEquipo(n){
+  const r = window._estadoPartida;
+  if(!r) return 0;
+  return n===1 ? r.puntaje_equipo1 : r.puntaje_equipo2;
+}
+
+// ─── Inicio ───
+async function crearPartida(){
+  const e1 = $('eq1Input').value.trim() || 'Equipo 1';
+  const e2 = $('eq2Input').value.trim() || 'Equipo 2';
+  try{
+    const res = await fetch(API_URL_FULL+'/partida', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({equipo1:e1, equipo2:e2})});
+    const data = await res.json();
+    partidaId = data.id;
+    window._estadoPartida = data;
+    equipoActivo = 1;
+    actualizarHeader();
+    mostrar('scrRuleta');
+    actualizarTurno();
+  }catch(e){ alert('Error al crear la partida: '+e.message); }
+}
+
+function actualizarTurno(){
+  $('turnoInfo').textContent = `Turno de: ${nombreEquipo(equipoActivo)}`;
+  $('turnoInfo2').textContent = `Turno de: ${nombreEquipo(equipoActivo)}`;
+  $('turnoInfo').style.color = equipoActivo===1 ? '#1e88e5' : '#e53935';
+}
+
+// ─── Ruleta ───
+async function girar(){
+  if(girando || !partidaId) return;
+  girando = true;
+  $('btnGirar').disabled = true;
+  $('ruletaEstado').innerHTML = '<span class="girando">🎡 Girando...</span>';
+
+  // 1) Pedir categoría + tarjeta al server
+  let data;
+  try{
+    const res = await fetch(API_URL_FULL+'/girar', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    data = await res.json();
+  }catch(e){
+    girando = false; $('btnGirar').disabled = false;
+    alert('Error al girar: '+e.message); return;
+  }
+
+  categoriaActual = data.categoria;
+  tarjetaActual = data.tarjeta;
+  audioUrl = data.audio_url;
+
+  // 2) Animar la ruleta hasta la categoría elegida
+  const target = CAT_POS[categoriaActual.id];
+  const vueltas = 5; // 5 giros completos
+  const jitter = Math.random()*45 - 22.5; // caer dentro del sector (no en el borde)
+  const rotacion = vueltas*360 + target + jitter;
+
+  const img = $('ruletaImg');
+  img.style.transition = 'none';
+  img.style.transform = 'rotate(0deg)';
+  void img.offsetWidth; // reflow
+  img.style.transition = 'transform 4.2s cubic-bezier(.16,.82,.3,1)';
+  img.style.transform = `rotate(${rotacion}deg)`;
+
+  setTimeout(()=>{
+    girando = false;
+    $('ruletaEstado').innerHTML = `
+      <div class="cat-nombre" style="background:${categoriaActual.color}">${ICONOS[categoriaActual.id]} ${categoriaActual.nombre}</div>
+      <div class="cat-sub">${tarjetaActual.tipo === 'situacion' ? 'Situación (nivel avanzado)' : 'Pregunta (nivel básico)'}</div>`;
+    setTimeout(mostrarTarjeta, 700);
+  }, 4400);
+}
+
+// ─── Tarjeta ───
+function mostrarTarjeta(){
+  $('tagCategoria').textContent = (tarjetaActual.tipo==='situacion'?'🩺 ':'❓ ')+categoriaActual.nombre.toUpperCase();
+  $('tagCategoria').style.background = categoriaActual.color;
+  $('tarjetaTexto').textContent = tarjetaActual.texto;
+  $('tipoAviso').textContent = tarjetaActual.tipo === 'situacion'
+    ? `Situación N°${tarjetaActual.numero || ''} · Nivel avanzado`
+    : 'Pregunta · Nivel básico';
+  $('tarjetaBox').style.borderTopColor = categoriaActual.color;
+  mostrar('scrTarjeta');
+}
+
+function escucharTarjeta(){
+  // En Android: TTS nativo del bridge (lee la situación)
+  if(BRIDGE && tarjetaActual){
+    BRIDGE.hablar(tarjetaActual.texto.replace(/^Situación: /,''));
+    return;
+  }
+  // En navegador: audio del server
+  if(!audioUrl) return;
+  const p = $('audioPlayer');
+  p.src = audioUrl;
+  p.play().catch(()=>{});
+}
+
+function volverTarjeta(){ mostrar('scrTarjeta'); }
+
+function mostrarRespuesta(){
+  $('respSituacion').textContent = tarjetaActual.texto;
+  $('respInput').value = '';
+  mostrar('scrRespuesta');
+  setTimeout(()=> $('respInput').focus(), 300);
+}
+
+// ─── Evaluación ───
+async function evaluar(){
+  const respuesta = $('respInput').value.trim();
+  if(!respuesta){ alert('Escribí una respuesta primero'); return; }
+  const btn = document.querySelector('#scrRespuesta .btn');
+  btn.disabled = true; btn.textContent = '⏳ Evaluando con IA...';
+
+  try{
+    const res = await fetch(API_URL_FULL+'/evaluar', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+      partida_id: partidaId, categoria_id: categoriaActual.id,
+      tarjeta_id: tarjetaActual.id, tarjeta_tipo: tarjetaActual.tipo,
+      equipo: equipoActivo, respuesta: respuesta
+    })});
+    const data = await res.json();
+    window._estadoPartida = data.partida;
+
+    // Resultado
+    const r = data.resultado;
+    const icono = r.resultado==='correcta' ? '🎉' : r.resultado==='parcial' ? '🤔' : '😅';
+    const color = r.resultado==='correcta' ? '#43a047' : r.resultado==='parcial' ? '#fb8c00' : '#e53935';
+    const etiqueta = r.resultado.toUpperCase();
+    $('resIcono').textContent = icono;
+    $('resPuntaje').textContent = '+' + r.puntaje;
+    $('resPuntaje').style.color = color;
+    $('resEtiqueta').textContent = etiqueta;
+    $('resFeedback').textContent = r.feedback;
+
+    $('resEq1Name').textContent = nombreEquipo(1);
+    $('resEq2Name').textContent = nombreEquipo(2);
+    $('resEq1Pts').textContent = data.partida.puntaje_equipo1;
+    $('resEq2Pts').textContent = data.partida.puntaje_equipo2;
+    actualizarHeader();
+
+    // Audio del feedback
+    if(data.audio_url){
+      const p = $('audioPlayer');
+      p.src = data.audio_url;
+      p.play().catch(()=>{});
+    }
+
+    mostrar('scrResultado');
+    // Cambiar equipo para la próxima ronda
+    equipoActivo = equipoActivo===1 ? 2 : 1;
+    actualizarTurno();
+  }catch(e){
+    alert('Error al evaluar: '+e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '✅ Evaluar respuesta';
+  }
+}
+
+// ─── Micrófono (Web Speech API, si está disponible) ───
+function toggleMic(){
+  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)){
+    alert('Reconocimiento de voz no disponible en este navegador. Escribí la respuesta.');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!reconocimientoVoz){
+    reconocimientoVoz = new SR();
+    reconocimientoVoz.lang = 'es-AR';
+    reconocimientoVoz.continuous = false;
+    reconocimientoVoz.interimResults = false;
+    reconocimientoVoz.onresult = (ev) => {
+      const texto = ev.results[0][0].transcript;
+      $('respInput').value = texto;
+      $('micBtn').classList.remove('rec');
+      $('micBtn').innerHTML = '🎤 Responder con voz';
+    };
+    reconocimientoVoz.onend = () => {
+      $('micBtn').classList.remove('rec');
+      $('micBtn').innerHTML = '🎤 Responder con voz';
+    };
+    reconocimientoVoz.onerror = () => {
+      $('micBtn').classList.remove('rec');
+      $('micBtn').innerHTML = '🎤 Responder con voz';
+    };
+  }
+  $('micBtn').classList.add('rec');
+  $('micBtn').innerHTML = '🔴 Escuchando...';
+  reconocimientoVoz.start();
+}
+
+// ─── Reinicio ───
+function reiniciar(){
+  partidaId = null; equipoActivo = 1; categoriaActual = null; tarjetaActual = null;
+  window._estadoPartida = null;
+  $('eq1Input').value = ''; $('eq2Input').value = '';
+  actualizarHeader();
+  mostrar('scrInicio');
+}
+</script>
+</body>
+</html>
