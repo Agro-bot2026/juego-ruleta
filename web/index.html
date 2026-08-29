@@ -27,6 +27,11 @@ header {
   justify-content:space-between; position:sticky; top:0; z-index:50;
   box-shadow:0 2px 12px rgba(0,0,0,.25);
 }
+.marca {
+  text-align:center; padding:8px 12px 14px; color:#8a8aa0; font-size:12px;
+  background:var(--bg);
+}
+.marca b { color:#f0a500; font-weight:700; }
 header .logo-mini { width:38px; height:38px; border-radius:50%; overflow:hidden; border:2px solid #fff; flex-shrink:0; }
 header .logo-mini img { width:100%; height:100%; object-fit:cover; }
 header h1 { font-size:17px; font-weight:700; letter-spacing:.5px; margin-left:10px; flex:1; }
@@ -46,6 +51,8 @@ main { flex:1; padding:16px; max-width:520px; width:100%; margin:0 auto; }
 .hero .ruleta-logo img { width:100%; height:100%; object-fit:cover; }
 .hero h2 { font-size:22px; margin-bottom:4px; }
 .hero p { color:var(--gris); font-size:14px; }
+.hero .dev { margin-top:8px; font-size:13px; color:#8a8aa0; }
+.hero .dev b { color:#f0a500; }
 .card-form { background:var(--card); border-radius:16px; padding:20px; box-shadow:0 2px 14px rgba(0,0,0,.4); }
 .card-form label { display:block; font-size:13px; font-weight:600; color:var(--gris); margin:12px 0 5px; }
 .card-form input {
@@ -68,8 +75,10 @@ main { flex:1; padding:16px; max-width:520px; width:100%; margin:0 auto; }
 
 /* ─── Pantalla 1: Ruleta ─── */
 .ruleta-wrap {
-  position:relative; width:min(96vw, 440px);
-  aspect-ratio: 1 / 1;           /* cuadrado perfecto SIEMPRE */
+  position:relative; width:min(96vw, 460px);
+  /* Truco cuadrado 1:1 universal (funciona en TODO WebView):
+     el padding-bottom = 100% del ancho fuerza altura = ancho */
+  height:0; padding-bottom:100%;
   margin:6px auto 4px;
 }
 .ruleta-wrap .flecha {
@@ -82,14 +91,16 @@ main { flex:1; padding:16px; max-width:520px; width:100%; margin:0 auto; }
   background:#222; border-radius:50%; border:3px solid #fff;
 }
 .ruleta {
-  position:absolute; inset:0;     /* llena TODO el contenedor */
+  position:absolute; top:0; left:0; right:0; bottom:0;
   border-radius:50%; overflow:hidden;
-  background:#fff;
+  background:transparent;
 }
 .ruleta img {
-  position:absolute; inset:0;
-  width:100%; height:100%; object-fit:cover; display:block;
-  transition:none;
+  position:absolute; top:0; left:0;
+  width:100%; height:100%;
+  /* centerInside / fitCenter: mantiene proporción, NUNCA deforma */
+  object-fit:contain;
+  display:block; transition:none;
 }
 .ruleta.spinning img { transition:transform 5.2s cubic-bezier(.16,.82,.3,1); }
 .centro-marcador {
@@ -173,13 +184,18 @@ audio { display:none; }
   <div class="pts" id="headerPts">—</div>
 </header>
 
+<footer class="marca">
+  <span>🦇 Desarrollado por <b>Charly Tricks Dev</b></span>
+</footer>
+
 <main>
   <!-- Pantalla 0: Inicio -->
   <div class="screen active" id="scrInicio">
     <div class="hero">
-      <div class="ruleta-logo"><img src="assets/icons/ruleta_blanco.jpg" alt="Punto de Giro"></div>
+      <div class="ruleta-logo"><img src="assets/icons/ruleta_actual.png" alt="Punto de Giro"></div>
       <h2>🎡 Punto de Giro</h2>
       <p>Juego didáctico de enfermería</p>
+      <p class="dev">🦇 Desarrollado por <b>Charly Tricks Dev</b></p>
     </div>
     <div class="card-form">
       <label>Equipo 1</label>
@@ -196,7 +212,7 @@ audio { display:none; }
     <div class="ruleta-wrap">
       <div class="flecha"></div>
       <div class="ruleta" id="ruletaBox">
-        <img id="ruletaImg" src="assets/icons/ruleta_1024.png" alt="Ruleta">
+        <img id="ruletaImg" src="assets/icons/ruleta_actual.png" alt="Ruleta">
       </div>
     </div>
     <div class="estado-ruleta">
